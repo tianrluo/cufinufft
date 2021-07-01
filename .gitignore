@@ -1,9 +1,42 @@
-*.o
-__pycache__
-bin
-lib
-lib-static
+# ignore everything
+*
 
-python/cufinufft/docs/_build
-python/cufinufft/docs/_static
-python/cufinufft/docs/_templates
+# except
+!.gitignore
+!*.sh
+!*.m
+!*.h
+!*.c
+!*.cu
+!*.hpp
+!*.cpp
+!*.txt
+!*.md
+!*.py
+!*.rst
+
+# and specific files
+!docs/cufinufft_announce.png
+!docs/logo.png
+!Jenkinsfile
+!make.bat
+!Makefile
+!README
+!CHANGELOG
+!MANIFEST.in
+
+# even if aboves are in sub-dirs
+!*/
+
+# Do also track future changes of everything under these specific dirs,
+# under which the existing files are already being tracked.
+!ci/**
+!sites/**
+!targets/**
+
+# but never in these folders
+*.egg-info/
+*.ipynb_checkpoints/
+*.vscode/
+*.vector_cache/
+*build/
