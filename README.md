@@ -81,7 +81,7 @@ It is also possible to change advanced options by changing the last `NULL`
 argument of the `cufinufft_makeplan` call to a pointer
 to an options struct, `opts`.
 This struct should first be initialized via
-```cufinufft_default_opts(type, dim, &opts);```
+`cufinufft_default_opts(type, dim, &opts);`
 before the user changes any fields.
 For examples of this advanced usage, see `test/cufinufft*.cu`
 
@@ -97,6 +97,16 @@ If you would like to always have this installation in your library path, you can
 with something like the following:
 
 `echo "\n# cufinufft librarypath \nexport LD_LIBRARY_PATH=${PWD}/lib:${LD_LIBRARY_PATH}" >> ~/.bashrc`
+
+For Conda users who wants to keep this limit this env variable to a specific conda environment with a name
+as, e.g., `conda-env-cufinufft`, according to
+[conda doc](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#setting-environment-variables),
+you can do:
+```sh
+$ conda activate conda-env-cufinufft
+$ conda env config vars set LD_LIBRARY_PATH=/PATH/TO/YOUR/LOCAL/cufinufft/lib:${LD_LIBRARY_PATH}
+$ conda activate conda-env-cufinufft # reactivate to refresh
+```
 
 Because CUDA itself has similar library/path requirements, it is expected the user is somewhat familiar.
 If not, please ask, we might be able to help.
