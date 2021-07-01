@@ -8,22 +8,28 @@ from setuptools import setup, Extension
 # Description
 DESCRIPTION = "Non-uniform fast Fourier transforms on the GPU"
 
-with open(os.path.join('python', 'cufinufft', 'README.md'), encoding='utf8') as fh:
+dir_path = os.path.join(os.path.dirname(__file__))
+
+with open(os.path.join(dir_path, 'python', 'cufinufft', 'README.md'), encoding='utf8') as fh:
     LONG_DESCRIPTION = fh.read()
 
 # Parse the requirements
-with open(os.path.join('python', 'cufinufft', 'requirements.txt'), 'r') as fh:
+with open(os.path.join(dir_path, 'python', 'cufinufft', 'requirements.txt'), 'r') as fh:
     requirements = [item.strip() for item in fh.readlines()]
 
 # Sanity check that we can find the CUDA cufinufft libraries before we get too far.
 try:
-    lib = ctypes.cdll.LoadLibrary('libcufinufft.so')
-except Exception as e:
-    print('CUDA shared libraries not found in library path.'
-          '  Please refer to installation documentation at http://github.com/flatironinstitute/cufinufft'
-          ' and ensure CUDA installation is successful first before attempting to install the Python wrappers.')
-    raise(e)
-print('cufinufft CUDA shared libraries found, continuing...')
+    # When building locally, `libcufinufft.so` may not have been added to path.
+    lib = ctypes.cdll.LoadLibrary(os.path.join(dir_path, 'lib', 'libcufinufft.so'))
+except Exception:
+    try:
+        lib = ctypes.cdll.LoadLibrary('libcufinufft.so')
+    except Exception as e:
+        print('CUDA shared libraries not found in library path.'
+              '  Please refer to installation documentation at http://github.com/flatironinstitute/cufinufft'
+              ' and ensure CUDA installation is successful first before attempting to install the Python wrappers.')
+        raise(e)
+        print('cufinufft CUDA shared libraries found, continuing...')
 
 
 # Python Package Setup
