@@ -1,3 +1,5 @@
+This fork merely adds an optional `cupy` support to the python wrap of `cufinufft`.
+
 # cuFINUFFT v1.2
 
 <img align="right" src="docs/logo.png" width="350">
