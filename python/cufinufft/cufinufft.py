@@ -4,10 +4,14 @@ This module contains the high level python wrapper for
 the cufinufft CUDA libraries.
 """
 
+from typing import Union, Optional
+
 import atexit
 import sys
 
 import numpy as np
+
+from pycuda.gpuarray import GPUArray
 
 from ctypes import byref
 from ctypes import c_int
@@ -24,6 +28,29 @@ from cufinufft._cufinufft import _exec_planf
 from cufinufft._cufinufft import _destroy_plan
 from cufinufft._cufinufft import _destroy_planf
 
+# Handling `pycuda`, and `cupy` arrays
+Cuda_Array = GPUArray
+
+
+def _cuptr(x: Cuda_Array) -> int:
+    return x.ptr
+
+
+try:
+    import cupy as cp
+    Cuda_Array = Union[Cuda_Array, cp.ndarray]
+
+    def _cuptr(x: Cuda_Array) -> int:  # noqa: F811
+        if isinstance(x, GPUArray):
+            return x.ptr
+        elif isinstance(x, cp.ndarray):
+            return x.data.ptr
+        else:
+            raise TypeError('Unexpected array type')
+
+except ImportError:
+    print('`cupy` not available, rely on numpy and pycuda')
+# (end) Handling `pycuda`, and `cupy` arrays
 
 # If we are shutting down python, we don't need to run __del__
 #   This will avoid any shutdown gc ordering problems.
@@ -46,7 +73,7 @@ class cufinufft:
         and make a plan with the cufinufft libraries.
         Exposes python methods to execute and destroy.
 
-        :param finufft_type: integer 1, 2, or 3.
+        :param nufft_type: integer 1, 2, or 3.
         :param modes: Array describing the shape of the transform \
         in 1, 2, or 3 dimensions.
         :param n_trans: Number of transforms, defaults to 1.
@@ -124,7 +151,7 @@ class cufinufft:
         self.references = []
 
     @staticmethod
-    def _default_opts(nufft_type, dim):
+    def _default_opts(nufft_type: int, dim: int):
         """
         Generates a cufinufft opt struct of the dtype coresponding to plan.
 
@@ -164,7 +191,12 @@ class cufinufft:
         if ier != 0:
             raise RuntimeError('Error creating plan.')
 
-    def set_pts(self, kx, ky=None, kz=None):
+    def set_pts(
+        self,
+        kx: Cuda_Array,
+        ky: Optional[Cuda_Array] = None,
+        kz: Optional[Cuda_Array] = None
+    ):
         """
         Sets non uniform points of the correct dtype.
 
@@ -176,24 +208,24 @@ class cufinufft:
         :param kz: Array of z points.
         """
 
-        if kx.dtype != self.dtype:
+        if np.dtype(kx.dtype) != self.dtype:
             raise TypeError("cufinufft plan.dtype and "
                             "kx dtypes do not match.")
 
-        if ky and ky.dtype != self.dtype:
+        if ky is not None and np.dtype(ky.dtype) != self.dtype:
             raise TypeError("cufinufft plan.dtype and "
                             "ky dtypes do not match.")
 
-        if kz and kz.dtype != self.dtype:
+        if kz is not None and np.dtype(kz.dtype) != self.dtype:
             raise TypeError("cufinufft plan.dtype and "
                             "kz dtypes do not match.")
 
         M = kx.size
 
-        if ky and ky.size != M:
+        if ky is not None and ky.size != M:
             raise TypeError("Number of elements in kx and ky must be equal")
 
-        if kz and kz.size != M:
+        if kz is not None and kz.size != M:
             raise TypeError("Number of elements in kx and kz must be equal")
 
         # Because FINUFFT/cufinufft are internally column major,
@@ -205,17 +237,17 @@ class cufinufft:
         #     (x, y, None)    ~>  (y, x, None)
         #     (x, y, z)       ~>  (z, y, x)
         # Via code, we push each dimension onto a stack of axis
-        fpts_axes = [kx.ptr, None, None]
+        fpts_axes = [_cuptr(kx), None, None]
 
         # We will also store references to these arrays.
         #   This keeps python from prematurely cleaning them up.
         self.references.append(kx)
         if ky is not None:
-            fpts_axes.insert(0, ky.ptr)
+            fpts_axes.insert(0, _cuptr(ky))
             self.references.append(ky)
 
         if kz is not None:
-            fpts_axes.insert(0, kz.ptr)
+            fpts_axes.insert(0, _cuptr(kz))
             self.references.append(kz)
 
         # Then take three items off the stack as our reordered axis.
@@ -224,7 +256,7 @@ class cufinufft:
         if ier != 0:
             raise RuntimeError('Error setting non-uniform points.')
 
-    def execute(self, c, fk):
+    def execute(self, c: Cuda_Array, fk: Cuda_Array):
         """
         Executes plan. Note the IO orientation of `c` and `fk` are
         determined by plan type.
@@ -236,12 +268,12 @@ class cufinufft:
         :param fk: Fourier space array in 1, 2, or 3 dimensions.
         """
 
-        if not c.dtype == fk.dtype == self.complex_dtype:
+        if not np.dtype(c.dtype) == np.dtype(fk.dtype) == self.complex_dtype:
             raise TypeError("cufinufft execute expects {} dtype arguments "
                             "for this plan. Check plan and arguments.".format(
                                 self.complex_dtype))
 
-        ier = self._exec_plan(c.ptr, fk.ptr, self.plan)
+        ier = self._exec_plan(_cuptr(c), _cuptr(fk), self.plan)
 
         if ier != 0:
             raise RuntimeError('Error executing plan.')

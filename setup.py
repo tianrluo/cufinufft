@@ -45,9 +45,10 @@ setup(
     license="Apache 2",
     packages=['cufinufft'],
     package_dir={'': 'python'},
-    install_requires=requirements,
+    install_requires=['numpy', 'pycuda', 'six'],
     # If you'd like to build or alter the docs you may additionally require these.
     extras_require={
+        'cupy': ['cupy'],
         'docs': ['sphinx', 'sphinx_rtd_theme']
     },
     classifiers=['Intended Audience :: Science/Research',
